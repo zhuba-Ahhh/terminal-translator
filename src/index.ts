@@ -1,5 +1,6 @@
 import { TranslationService, TranslationConfig, ServiceName } from "./types";
 import { YoudaoTranslateService } from "./services/youdao";
+import { DeepSeekTranslateService } from "./services/deepseek";
 import { ConfigManager } from "./config";
 
 export class TranslationFactory {
@@ -7,6 +8,7 @@ export class TranslationFactory {
   private static configManager = new ConfigManager();
 
   public static getService(serviceName?: ServiceName): TranslationService {
+    this.configManager.reset();
     const config = this.configManager.getConfig();
     const service =
       serviceName || (config.defaultService as ServiceName) || "youdao";
@@ -25,6 +27,9 @@ export class TranslationFactory {
     switch (service.toLowerCase()) {
       case "youdao":
         translationService = new YoudaoTranslateService(apiKey);
+        break;
+      case "deepseek":
+        translationService = new DeepSeekTranslateService(apiKey);
         break;
       default:
         throw new Error(`Unsupported translation service: ${service}`);
@@ -65,3 +70,4 @@ export {
   CommandOptions,
 } from "./types";
 export { YoudaoTranslateService } from "./services/youdao";
+export { DeepSeekTranslateService } from "./services/deepseek";

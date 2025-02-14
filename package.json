@@ -12,6 +12,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "dev": "pnpm build && npm link",
     "test": "jest",
     "start": "pnpm build && node dist/cli.js"
   },
@@ -26,7 +27,6 @@
   "license": "MIT",
   "dependencies": {
     "@types/conf": "^3.0.3",
-    "axios": "^1.6.2",
     "chalk": "^4.1.2",
     "commander": "^11.1.0",
     "conf": "^10.2.0",

@@ -12,7 +12,7 @@ export interface TranslationService {
   getSupportedLanguages(): Promise<Array<{ code: string; name: string }>>;
 }
 
-export type ServiceName = "youdao";
+export type ServiceName = "youdao" | "deepseek";
 
 export type appKeyItem = {
   appKey: string;

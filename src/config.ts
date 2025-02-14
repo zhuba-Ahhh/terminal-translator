@@ -1,6 +1,11 @@
 import Conf from "conf";
 import { appKeyItem, ServiceName, TranslationConfig } from "./types";
 
+const wangYi = {
+  appKey: "60e4479f20e0a4d4",
+  appSecret: "UHN5hjnYK5QYWEyQhzBPDsukxnVeLJ6P",
+};
+
 export class ConfigManager {
   private config: Conf<TranslationConfig>;
 
@@ -12,10 +17,8 @@ export class ConfigManager {
         defaultSourceLang: "auto",
         defaultTargetLang: "en",
         apiKeys: {
-          youdao: {
-            appKey: "60e4479f20e0a4d4",
-            appSecret: "UHN5hjnYK5QYWEyQhzBPDsukxnVeLJ6P",
-          },
+          youdao: wangYi,
+          deepseek: wangYi,
         },
       },
     });
@@ -51,10 +54,8 @@ export class ConfigManager {
       defaultSourceLang: "auto",
       defaultTargetLang: "en",
       apiKeys: {
-        youdao: {
-          appKey: "60e4479f20e0a4d4",
-          appSecret: "UHN5hjnYK5QYWEyQhzBPDsukxnVeLJ6P",
-        },
+        youdao: wangYi,
+        deepseek: wangYi,
       },
     });
   }
