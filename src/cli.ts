@@ -13,15 +13,15 @@ program
     "A command-line translation tool supporting multiple translation services"
   )
   .version("1.0.0")
-  .argument("[text]", "Text to translate")
+  .argument("[text...]", "Text to translate")
   .option("-f, --from <lang>", "Source language (default: auto)")
   .option("-t, --to <lang>", "Target language (default: en)")
   .option("-s, --service <name>", "Translation service to use (youdao)")
   .option("-i, --interactive", "Interactive mode")
-  .action(async (text: string | undefined, options: CommandOptions) => {
+  .action(async (textArray: string[] | undefined, options: CommandOptions) => {
     try {
       const config = TranslationFactory.getConfig();
-      let textToTranslate = text;
+      let textToTranslate = textArray ? textArray.join(" ") : undefined;
       let fromLang = options.from || config.defaultSourceLang;
       let toLang = options.to || config.defaultTargetLang;
       let service = options.service || config.defaultService;
@@ -59,20 +59,6 @@ program
             },
             validate: (input) => input.length > 0 || "AppSecret不能为空",
           },
-          // {
-          //   type: "input",
-          //   name: "from",
-          //   message: "请输入源语言(auto表示自动检测):",
-          //   when: options.interactive,
-          //   default: fromLang,
-          // },
-          // {
-          //   type: "input",
-          //   name: "to",
-          //   message: "请输入目标语言:",
-          //   when: options.interactive,
-          //   default: toLang,
-          // },
         ]);
 
         textToTranslate = answers.text || textToTranslate;
@@ -93,7 +79,8 @@ program
 
       // 智能检测语言
       if (fromLang === "auto") {
-        const isEnglish = /^[a-zA-Z\s.,!?]+$/.test(textToTranslate!);
+        // 修改正则表达式以更准确地检测英文文本
+        const isEnglish = /^[a-zA-Z\s\.,!\?"']+$/.test(textToTranslate!);
         fromLang = isEnglish ? "en" : "zh-CHS";
         toLang = isEnglish ? "zh-CHS" : "en";
       }

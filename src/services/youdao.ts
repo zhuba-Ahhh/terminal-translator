@@ -51,9 +51,16 @@ export class YoudaoTranslateService implements TranslationService {
 
     const data = await response.json();
 
+    if (!data.translation || data.translation.length === 0) {
+      throw new Error("Translation result is empty");
+    }
+
+    // 将所有翻译结果合并为一个字符串
+    const translatedText = data.translation.join(" ");
+
     return {
       originalText: text,
-      translatedText: data.translation[0],
+      translatedText,
       from,
       to,
       service: this.name,
