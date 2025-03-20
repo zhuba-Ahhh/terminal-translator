@@ -7,21 +7,32 @@ import ora from "ora";
 import { TranslationFactory } from ".";
 import { CommandOptions, ServiceName } from "./types";
 
+const SUPPORTED_LANGUAGES = [
+  { name: "自动检测", value: "auto" },
+  { name: "中文", value: "zh-CHS" },
+  { name: "英语", value: "en" },
+  { name: "日语", value: "ja" },
+  { name: "韩语", value: "ko" },
+  { name: "法语", value: "fr" },
+  { name: "德语", value: "de" },
+  { name: "西班牙语", value: "es" },
+];
+
+const SUPPORTED_SERVICES = [{ name: "有道翻译", value: "youdao" }];
+
 program
   .name("translate")
-  .description(
-    "A command-line translation tool supporting multiple translation services"
-  )
+  .description("一个支持多翻译服务的命令行翻译工具")
   .version("1.0.0")
-  .argument("[text...]", "Text to translate")
-  .option("-f, --from <lang>", "Source language (default: auto)")
-  .option("-t, --to <lang>", "Target language (default: en)")
-  .option("-s, --service <name>", "Translation service to use (youdao)")
-  .option("-i, --interactive", "Interactive mode")
+  .argument("[text...]", "要翻译的文本")
+  .option("-f, --from <lang>", "源语言 (默认: auto)")
+  .option("-t, --to <lang>", "目标语言 (默认: en)")
+  .option("-s, --service <name>", "翻译服务 (youdao/baidu/google)")
+  .option("-i, --interactive", "交互模式")
   .action(async (textArray: string[] | undefined, options: CommandOptions) => {
     try {
       const config = TranslationFactory.getConfig();
-      let textToTranslate = textArray ? textArray.join(" ") : undefined;
+      let textToTranslate = textArray ? textArray.join("\n") : undefined;
       let fromLang = options.from || config.defaultSourceLang;
       let toLang = options.to || config.defaultTargetLang;
       let service = options.service || config.defaultService;
@@ -32,30 +43,52 @@ program
       if (options.interactive || !textToTranslate || needApiKey) {
         const answers = await inquirer.prompt([
           {
-            type: "input",
+            type: "editor",
             name: "text",
-            message: "请输入要翻译的文本:",
+            message: "请输入要翻译的文本 (按 Ctrl+D 或 Ctrl+X 保存并退出):",
             when: !textToTranslate,
             validate: (input) => input.length > 0 || "请输入有效的文本",
           },
-
+          {
+            type: "list",
+            name: "service",
+            message: "请选择翻译服务:",
+            choices: SUPPORTED_SERVICES,
+            when: !service,
+          },
+          {
+            type: "list",
+            name: "from",
+            message: "请选择源语言:",
+            choices: SUPPORTED_LANGUAGES,
+            when: !fromLang || fromLang === "auto",
+          },
+          {
+            type: "list",
+            name: "to",
+            message: "请选择目标语言:",
+            choices: SUPPORTED_LANGUAGES.filter(
+              (lang) => lang.value !== "auto"
+            ),
+            when: !toLang,
+          },
           {
             type: "input",
             name: "appKey",
-            message: "请输入有道翻译AppKey:",
+            message: "请输入翻译服务AppKey:",
             when: (answers) => {
               const selectedService: ServiceName = answers.service || service;
-              return selectedService === "youdao" && !apiKeys[selectedService];
+              return !apiKeys[selectedService];
             },
             validate: (input) => input.length > 0 || "AppKey不能为空",
           },
           {
             type: "input",
             name: "appSecret",
-            message: "请输入有道翻译AppSecret:",
+            message: "请输入翻译服务AppSecret:",
             when: (answers) => {
               const selectedService: ServiceName = answers.service || service;
-              return selectedService === "youdao" && !apiKeys[selectedService];
+              return !apiKeys[selectedService];
             },
             validate: (input) => input.length > 0 || "AppSecret不能为空",
           },
@@ -68,7 +101,7 @@ program
 
         if (answers.appKey && answers.appSecret) {
           TranslationFactory.setApiKey(
-            "youdao",
+            service,
             JSON.stringify({
               appKey: answers.appKey,
               appSecret: answers.appSecret,
@@ -79,7 +112,6 @@ program
 
       // 智能检测语言
       if (fromLang === "auto") {
-        // 修改正则表达式以更准确地检测英文文本
         const isEnglish = /^[a-zA-Z\s\.,!\?"']+$/.test(textToTranslate!);
         fromLang = isEnglish ? "en" : "zh-CHS";
         toLang = isEnglish ? "zh-CHS" : "en";
@@ -96,24 +128,74 @@ program
         );
 
         spinner.succeed("翻译完成");
-        console.log("\n" + "=".repeat(50));
-        console.log("\n" + chalk.cyan.bold("[ 翻译信息 ]"));
-        console.log(chalk.dim("─".repeat(50)));
-        console.log(chalk.cyan.bold("源语言:"), chalk.yellow(result.from));
-        console.log(chalk.cyan.bold("目标语言:"), chalk.yellow(result.to));
-        console.log(chalk.cyan.bold("翻译服务:"), chalk.yellow(result.service));
-        console.log(chalk.dim("─".repeat(50)));
-        console.log("\n" + chalk.cyan.bold("[ 翻译内容 ]"));
-        console.log(chalk.dim("─".repeat(50)));
+
+        // 使用 chalk 美化输出
+        const title = chalk.hex("#FF6B6B").bold("✨ 翻译结果 ✨");
+        const infoItems = [
+          { label: "源语言", value: result.from },
+          { label: "目标语言", value: result.to },
+          { label: "翻译服务", value: result.service },
+        ];
+
+        // 构建信息部分
+        const infoSection = infoItems
+          .map(
+            (item) =>
+              `${chalk.hex("#4ECDC4")(item.label + ":")} ${chalk.hex("#45B7D1")(
+                item.value
+              )}`
+          )
+          .join("\n");
+
+        // 构建翻译内容部分
+        const originalLines = result.originalText.split("\n");
+        const translatedLines = result.translatedText.split("\n");
+        const contentSection = originalLines
+          .map((line, index) => {
+            const parts = [
+              `${chalk.hex("#4ECDC4")("原文:")} ${chalk.hex("#96CEB4")(line)}`,
+            ];
+            if (translatedLines[index]) {
+              parts.push(
+                `${chalk.hex("#4ECDC4")("译文:")} ${chalk
+                  .hex("#FFEEAD")
+                  .bold(translatedLines[index])}`
+              );
+            }
+            return parts.join("\n");
+          })
+          .join("\n");
+
+        // 组合所有内容
+        const content = [title, "", infoSection, "", contentSection].join("\n");
+
+        // 创建框线
+        const boxWidth = 70;
+        const boxPadding = 4;
+
+        // 分隔线
+        console.log(chalk.hex("#4ECDC4").bold("─".repeat(boxWidth)));
+
+        // 内容
+        content.split("\n").forEach((line) => {
+          if (line.trim()) {
+            console.log(" ".repeat(boxPadding) + line);
+          } else {
+            console.log("");
+          }
+        });
+
+        // 底部边框
+        console.log(chalk.hex("#4ECDC4").bold("─".repeat(boxWidth)) + "\n");
+
+        // 添加提示信息
         console.log(
-          chalk.magenta.bold("原文:"),
-          chalk.gray(result.originalText)
+          chalk
+            .hex("#96CEB4")
+            .dim(
+              "提示: 使用 translate -i 进入交互模式，或使用 translate <文本> 直接翻译\n"
+            )
         );
-        console.log(
-          chalk.magenta.bold("译文:"),
-          chalk.green.bold(result.translatedText)
-        );
-        console.log(chalk.dim("─".repeat(50)) + "\n");
       } catch (error) {
         spinner.fail("翻译失败");
         throw error;
